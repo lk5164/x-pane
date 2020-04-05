@@ -1,5 +1,5 @@
 [[redirects]]
-  from = "/api"
-  to = "http://76.111.112.192:8003"
+  from = "/api/*"
+  to = "http://76.111.112.192:8003/api/execute"
   status = 200
   force = true # COMMENT: ensure that we always redirect
