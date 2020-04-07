@@ -6,6 +6,20 @@ var colors = require('colors');
 
 exports.stats = false ;
 
+const deleteFolderRecursive = function(path) {
+  if (fs.existsSync(path)) {
+      fs.readdirSync(path).forEach((file, index) => {
+      const curPath = path + '/' + file;
+      if (fs.lstatSync(curPath).isDirectory()) { // recurse
+        deleteFolderRecursive(curPath);
+      } else { // delete file
+        fs.unlinkSync(curPath);
+      }
+    });
+    fs.rmdirSync(path);
+  }
+};
+
 exports.compileJava = function (envData , code , fn ){
 	//creating source file
     var dirname = cuid.slug();
@@ -16,6 +30,9 @@ exports.compileJava = function (envData , code , fn ){
 		console.log(err.toString().red);
 		else
 		{
+		  code = 'package ' + dirname + `;\n
+		  import basic.*;
+		  ` + code;
 			fs.writeFile( path  + "/Main.java" , code  , function(err ){
 				if(err && exports.stats)
 					console.log('ERROR: '.red + err);
@@ -24,19 +41,20 @@ exports.compileJava = function (envData , code , fn ){
 			    	if(exports.stats)
 			    		console.log('INFO: '.green + path + "/Main.java created");
 
-					var command = "cd "+path+ " && " + " javac Main.java";
+					var command = "cd ./temp/ && javac ./" + dirname + "/Main.java";
 					exec(command , function( error , stdout , stderr ){
 						if(error)
 						{
 							if(exports.stats)
 								console.log("INFO: ".green + path + "/Main.java contained an error while compiling");
 							var out = {error : stderr };
+							deleteFolderRecursive(path);
 							fn(out);
 						}
 						else
 						{
 							console.log("INFO: ".green + "compiled a java file");
-							var command = "cd "+path+" && java Main";
+							var command = "cd ./temp/ && java " + dirname + ".Main";
 							exec(command , function( error , stdout , stderr ){
 								if(error)
 								{
@@ -44,6 +62,7 @@ exports.compileJava = function (envData , code , fn ){
 									if(error.toString().indexOf('Error: stdout maxBuffer exceeded.') != -1)
 									{
 										var out = { error : 'Error: stdout maxBuffer exceeded. You might have initialized an infinite loop.'};
+										deleteFolderRecursive(path);
 										fn(out);
 									}
 									else
@@ -53,6 +72,7 @@ exports.compileJava = function (envData , code , fn ){
 											console.log('INFO: '.green + path  + '/Main.java contained an error while executing');
 										}
 										var out = { error : stderr};
+										deleteFolderRecursive(path);
 										fn(out);
 									}
 								}
@@ -63,6 +83,7 @@ exports.compileJava = function (envData , code , fn ){
 										console.log('INFO: '.green + path + '/Main.java successfully compiled and executed !');
 									}
 									var out = { output : stdout};
+									deleteFolderRecursive(path);
 									fn(out);
 								}
 							});
